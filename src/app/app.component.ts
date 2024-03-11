@@ -29,11 +29,13 @@ export class AppComponent implements OnInit{
   lastPlayerPoint = [-1, -1];
   lastComputerPoint = [-1, -1];
   winPlayer = '';
+  isPlayerWon = false;
 
   init() {
     this.lastPlayerPoint = [-1, -1];
     this.lastComputerPoint = [-1, -1];
     this.winPlayer = '';
+    this.isPlayerWon = false;
     this.matrixGame = [];
     const urlParams = new URLSearchParams(window.location.search);
     let rows = '20';
@@ -159,18 +161,20 @@ export class AppComponent implements OnInit{
     return count;
   }
 
-  checkWin(points: any) {
-    if(this.getHorizontal(Number(points[0]), Number(points[1]), X) >= 5
+  checkWin(points: any, isComputer: boolean) {
+    if((this.getHorizontal(Number(points[0]), Number(points[1]), X) >= 5
       || this.getVertical(Number(points[0]), Number(points[1]), X) >= 5
       || this.getRightDiagonal(Number(points[0]), Number(points[1]), X) >= 5
-      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), X) >= 5) {
+      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), X) >= 5) && !isComputer) {
+      this.isPlayerWon = true;
       this.winPlayer = X;
       return true;
     }
-    if(this.getHorizontal(Number(points[0]), Number(points[1]), O) >= 5
+    if((this.getHorizontal(Number(points[0]), Number(points[1]), O) >= 5
       || this.getVertical(Number(points[0]), Number(points[1]), O) >= 5
       || this.getRightDiagonal(Number(points[0]), Number(points[1]), O) >= 5
-      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), O) >= 5) {
+      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), O) >= 5) && isComputer) {
+      this.isPlayerWon = false;
       this.winPlayer = O;
       return true;
     }
@@ -181,7 +185,8 @@ export class AppComponent implements OnInit{
     if (this.winPlayer !== '') return;
     switch (this.processClick(id)) {
       case WIN:
-        alert("Player: " + this.winPlayer === X ? 'You are' : 'Computer is' + " winner");
+        const winnerText = this.isPlayerWon ?  'You are' : 'Computer is';
+        alert(winnerText + " winner");
         // reset game
         // this.init();
         break;
@@ -209,11 +214,9 @@ export class AppComponent implements OnInit{
         this.lastComputerPoint = [Number(computerTurn[0]), Number(computerTurn[1])];
         this.matrixGame[Number(computerTurn[0])][Number(computerTurn[1])] = O;
 
-        if (this.checkWin(points)) {
+        if (this.checkWin(points, false)) {
           return WIN;
-        }
-
-        if (this.checkWin(computerTurn)) {
+        }else if (this.checkWin(computerTurn, true)) {
           return WIN;
         }
 
