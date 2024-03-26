@@ -276,7 +276,7 @@ export class AppComponent implements OnInit{
                 this.getRightDiagonal(i, j, O),
                 this.getLeftDiagonal(i, j, O)
               )
-            )) * 1.3 +
+            )) +
             this.getNumber(MAP_POINT_HUMAN.get(
               Math.max(
                 this.getHorizontal(i, j, X),
