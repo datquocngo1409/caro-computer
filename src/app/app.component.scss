@@ -180,8 +180,49 @@ table {
   border: none;
   color: white;
   font-weight: 700;
+  margin-top: 10px;
 
   &:hover {
     box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19);
+  }
+}
+
+.switch-container {
+  background-color: lightgray;
+  cursor: pointer;
+  border-radius: 10px;
+  width: 300px;
+  height: 50px;
+  &:hover {
+    box-shadow: 0 3px 4px 0 rgba(0,0,0,0.24), 0 3px 4px 0 rgba(0,0,0,0.19);
+  }
+  .switch-element {
+    width: 50%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    float: left;
+    z-index: 999;
+    position: relative;
+  }
+  .switch-button {
+    width: 140px;
+    height: 40px;
+    transition: all 0.75s ease;
+    background-color: white;
+    border-radius: 10px;
+    position: relative;
+    top: 5px; left: 5px;
+    z-index: 9;
+  }
+  .active-mode {
+    color: deepskyblue !important;
+    font-weight: bold;
+    transition-delay: 0.25s;
+    transition: color 0.5s ease;
+  }
+  .right-switch {
+    left: 155px !important;
   }
 }

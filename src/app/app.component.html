@@ -1,15 +1,26 @@
 <h1>Game caro</h1>
+<div class="switch-container" (click)="changeMode()">
+  <div class="normal-mode-container switch-element" [ngClass]="{'active-mode': isNormalMode}">
+    Normal mode
+  </div>
+  <div class="remember-mode-container switch-element" [ngClass]="{'active-mode': !isNormalMode}">
+    Remember mode
+  </div>
+  <div class="switch-button" [ngClass]="{'right-switch': !isNormalMode}">
+
+  </div>
+</div>
 <button class="reset-button" (click)="init()">New Game</button>
 <table>
   <tr *ngFor="let dataTd of matrixGame; index as i">
     <td *ngFor="let cell of dataTd; index as j">
       <div class="table-element" (click)="handleClick(i + '-' + j)"
            [ngClass]="{
-           'hiddenCell': isHiddenCell(cell, i, j),
+           'hiddenCell': isHiddenCell(cell, i, j) && !isNormalMode,
            'x': (cell === 'X'),
            'o': (cell === 'O')
            }">
-        {{isHiddenCell(cell, i, j) ? '' : cell}}
+        {{isHiddenCell(cell, i, j) && !isNormalMode ? '' : cell}}
       </div>
     </td>
   </tr>

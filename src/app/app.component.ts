@@ -30,6 +30,7 @@ export class AppComponent implements OnInit{
   lastComputerPoint = [-1, -1];
   winPlayer = '';
   isPlayerWon = false;
+  isNormalMode = false;
 
   init() {
     this.lastPlayerPoint = [-1, -1];
@@ -77,11 +78,18 @@ export class AppComponent implements OnInit{
     return true
   }
 
-  getHorizontal(x: number, y: number, player: string): number {
+  getOpponent(player: string) {
+    return player = X ? O : X;
+  }
+
+  getHorizontal(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
       if (y + i < this.matrixGame[0].length && this.matrixGame[x][y + i] === player) {
         count++;
+      } else if (y + i < this.matrixGame[0].length && this.matrixGame[x][y + i] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -90,6 +98,9 @@ export class AppComponent implements OnInit{
     for (let i = 1; i < 5; i++) {
       if (y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x][y - i] === player) {
         count++;
+      } else if (y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x][y - i] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -98,11 +109,14 @@ export class AppComponent implements OnInit{
     return count;
   }
 
-  getVertical(x: number, y: number, player: string): number {
+  getVertical(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
       if (x + i < this.matrixGame.length && this.matrixGame[x + i][y] === player) {
         count++;
+      } else if (x + i < this.matrixGame.length && this.matrixGame[x + i][y] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -111,6 +125,9 @@ export class AppComponent implements OnInit{
     for (let i = 1; i < 5; i++) {
       if (x - i >= 0 && x - i < this.matrixGame.length && this.matrixGame[x - i][y] === player) {
         count++;
+      } else if (x - i >= 0 && x - i < this.matrixGame.length && this.matrixGame[x - i][y] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -119,11 +136,14 @@ export class AppComponent implements OnInit{
     return count;
   }
 
-  getRightDiagonal(x: number, y: number, player: string): number {
+  getRightDiagonal(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
       if (x - i >= 0 && x - i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x - i][y + i] === player) {
         count++;
+      } else if (x - i >= 0 && x - i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x - i][y + i] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -132,6 +152,9 @@ export class AppComponent implements OnInit{
     for (let i = 1; i < 5; i++) {
       if (x + i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x + i][y - i] === player) {
         count++;
+      } else if (x + i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x + i][y - i] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -140,11 +163,14 @@ export class AppComponent implements OnInit{
     return count;
   }
 
-  getLeftDiagonal(x: number, y: number, player: string): number {
+  getLeftDiagonal(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
       if (x - i >= 0 && x - i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x - i][y - i] === player) {
         count++;
+      } else if (x - i >= 0 && x - i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x - i][y - i] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -153,6 +179,9 @@ export class AppComponent implements OnInit{
     for (let i = 1; i < 5; i++) {
       if (x + i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x + i][y + i] === player) {
         count++;
+      } else if (x + i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x + i][y + i] === this.getOpponent(player)) {
+        !isCheck && count--;
+        break;
       } else {
         break
       }
@@ -162,18 +191,18 @@ export class AppComponent implements OnInit{
   }
 
   checkWin(points: any, isComputer: boolean) {
-    if((this.getHorizontal(Number(points[0]), Number(points[1]), X) >= 5
-      || this.getVertical(Number(points[0]), Number(points[1]), X) >= 5
-      || this.getRightDiagonal(Number(points[0]), Number(points[1]), X) >= 5
-      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), X) >= 5) && !isComputer) {
+    if((this.getHorizontal(Number(points[0]), Number(points[1]), X, true) >= 5
+      || this.getVertical(Number(points[0]), Number(points[1]), X, true) >= 5
+      || this.getRightDiagonal(Number(points[0]), Number(points[1]), X, true) >= 5
+      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), X, true) >= 5) && !isComputer) {
       this.isPlayerWon = true;
       this.winPlayer = X;
       return true;
     }
-    if((this.getHorizontal(Number(points[0]), Number(points[1]), O) >= 5
-      || this.getVertical(Number(points[0]), Number(points[1]), O) >= 5
-      || this.getRightDiagonal(Number(points[0]), Number(points[1]), O) >= 5
-      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), O) >= 5) && isComputer) {
+    if((this.getHorizontal(Number(points[0]), Number(points[1]), O, true) >= 5
+      || this.getVertical(Number(points[0]), Number(points[1]), O, true) >= 5
+      || this.getRightDiagonal(Number(points[0]), Number(points[1]), O, true) >= 5
+      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), O, true) >= 5) && isComputer) {
       this.isPlayerWon = false;
       this.winPlayer = O;
       return true;
@@ -247,7 +276,7 @@ export class AppComponent implements OnInit{
                 this.getRightDiagonal(i, j, O),
                 this.getLeftDiagonal(i, j, O)
               )
-            )) +
+            )) * 1.3 +
             this.getNumber(MAP_POINT_HUMAN.get(
               Math.max(
                 this.getHorizontal(i, j, X),
@@ -286,5 +315,9 @@ export class AppComponent implements OnInit{
     return (cell === 'X' || cell === 'O') &&
     !((i === this.lastPlayerPoint[0] && j === this.lastPlayerPoint[1]) ||
       (i === this.lastComputerPoint[0] && j === this.lastComputerPoint[1]))
+  }
+
+  changeMode() {
+    this.isNormalMode = !this.isNormalMode
   }
 }
