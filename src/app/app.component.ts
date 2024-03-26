@@ -264,10 +264,22 @@ export class AppComponent implements OnInit{
   getPointsComputer() {
     let maxScore = -Infinity
     let pointsComputer = []
-    let listScorePoint = []
+    let listScorePoint: any[] = []
     for (let i = 0; i < this.matrixGame.length; i++) {
       for (let j = 0; j < this.matrixGame[0].length; j++) {
         if (this.matrixGame[i][j] === "") {
+          let horizontalScore =
+            this.getNumber(MAP_SCORE_COMPUTER.get(this.getHorizontal(i, j, O))) +
+            this.getNumber(MAP_POINT_HUMAN.get(this.getHorizontal(i, j, X) - 1))
+          let verticalScore =
+            this.getNumber(MAP_SCORE_COMPUTER.get(this.getVertical(i, j, O))) +
+            this.getNumber(MAP_POINT_HUMAN.get(this.getVertical(i, j, X) - 1))
+          let rightDiagonalScore =
+            this.getNumber(MAP_SCORE_COMPUTER.get(this.getRightDiagonal(i, j, O))) +
+            this.getNumber(MAP_POINT_HUMAN.get(this.getRightDiagonal(i, j, X) - 1))
+          let leftDiagonalScore =
+            this.getNumber(MAP_SCORE_COMPUTER.get(this.getLeftDiagonal(i, j, O))) +
+            this.getNumber(MAP_POINT_HUMAN.get(this.getLeftDiagonal(i, j, X) - 1))
           let score =
             this.getNumber(MAP_SCORE_COMPUTER.get(
               Math.max(
@@ -285,21 +297,33 @@ export class AppComponent implements OnInit{
                 this.getLeftDiagonal(i, j, X)
               ) - 1
             ))
+          listScorePoint.push({
+            "totalScore": horizontalScore + verticalScore + rightDiagonalScore + leftDiagonalScore,
+            "score": score,
+            "point": [i,j],
+          })
           if (maxScore <= score) {
             maxScore = score
-            listScorePoint.push({
-              "score": score,
-              "point": [i,j],
-            })
           }
         }
       }
     }
 
     // get list max score
-    for (const element of listScorePoint) {
-      if (element.score === maxScore) {
+    let maxScoreInList = Math.max(...listScorePoint.map(x => x.totalScore));
+    let maxListScorePoint = listScorePoint.filter(p => p.totalScore === maxScoreInList)
+    let listScoreUse = maxListScorePoint.length > 0 ? maxListScorePoint : listScorePoint;
+    let maxScoreToUse = maxScore < 1000 && maxScoreInList ?  maxScoreInList : maxScore;
+    for (const element of listScoreUse) {
+      if (element.score === maxScoreToUse || element.totalScore === maxScoreToUse) {
         pointsComputer.push(element.point)
+      }
+    }
+    if (pointsComputer.length === 0) {
+      for (const element of listScorePoint) {
+        if (element.score === maxScore) {
+          pointsComputer.push(element.point)
+        }
       }
     }
     return pointsComputer[Math.floor(Math.random()*pointsComputer.length)]
