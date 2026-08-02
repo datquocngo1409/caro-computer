@@ -40,6 +40,8 @@ export class AppComponent implements OnInit{
   pendingRow: number | null = null;
   pendingCol: number | null = null;
 
+  winningCells = new Set<string>();
+
   @ViewChild('boardViewport') boardViewportRef!: ElementRef<HTMLDivElement>;
   isDragging = false;
   private dragMoved = false;
@@ -60,6 +62,7 @@ export class AppComponent implements OnInit{
     this.moveCount = 0;
     this.pendingRow = null;
     this.pendingCol = null;
+    this.winningCells.clear();
     this.minRow = -INITIAL_RADIUS;
     this.maxRow = INITIAL_RADIUS;
     this.minCol = -INITIAL_RADIUS;
@@ -298,23 +301,57 @@ export class AppComponent implements OnInit{
   }
 
   checkWin(points: any, isComputer: boolean) {
-    if((this.getHorizontal(Number(points[0]), Number(points[1]), X, true) >= 5
-      || this.getVertical(Number(points[0]), Number(points[1]), X, true) >= 5
-      || this.getRightDiagonal(Number(points[0]), Number(points[1]), X, true) >= 5
-      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), X, true) >= 5) && !isComputer) {
+    const x = Number(points[0]);
+    const y = Number(points[1]);
+    if((this.getHorizontal(x, y, X, true) >= 5
+      || this.getVertical(x, y, X, true) >= 5
+      || this.getRightDiagonal(x, y, X, true) >= 5
+      || this.getLeftDiagonal(x, y, X, true) >= 5) && !isComputer) {
       this.isPlayerWon = true;
       this.winPlayer = X;
+      this.setWinningCells(x, y, X);
       return true;
     }
-    if((this.getHorizontal(Number(points[0]), Number(points[1]), O, true) >= 5
-      || this.getVertical(Number(points[0]), Number(points[1]), O, true) >= 5
-      || this.getRightDiagonal(Number(points[0]), Number(points[1]), O, true) >= 5
-      || this.getLeftDiagonal(Number(points[0]), Number(points[1]), O, true) >= 5) && isComputer) {
+    if((this.getHorizontal(x, y, O, true) >= 5
+      || this.getVertical(x, y, O, true) >= 5
+      || this.getRightDiagonal(x, y, O, true) >= 5
+      || this.getLeftDiagonal(x, y, O, true) >= 5) && isComputer) {
       this.isPlayerWon = false;
       this.winPlayer = O;
+      this.setWinningCells(x, y, O);
       return true;
     }
     return false;
+  }
+
+  setWinningCells(x: number, y: number, player: string) {
+    const directions: Array<[number, number]> = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (const [dx, dy] of directions) {
+      const cells: Array<[number, number]> = [[x, y]];
+
+      let cx = x + dx, cy = y + dy;
+      while (this.getCell(cx, cy) === player) {
+        cells.push([cx, cy]);
+        cx += dx;
+        cy += dy;
+      }
+      cx = x - dx;
+      cy = y - dy;
+      while (this.getCell(cx, cy) === player) {
+        cells.push([cx, cy]);
+        cx -= dx;
+        cy -= dy;
+      }
+
+      if (cells.length >= 5) {
+        this.winningCells = new Set(cells.map(([r, c]) => r + ',' + c));
+        return;
+      }
+    }
+  }
+
+  isWinningCell(row: number, col: number): boolean {
+    return this.winningCells.has(row + ',' + col);
   }
 
   handleClick(row: number, col: number) {

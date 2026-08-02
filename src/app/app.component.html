@@ -18,7 +18,8 @@
                'o': (getCell(row, col) === 'O'),
                'last-move-player': !winPlayer && isLastMove(row, col, lastPlayerPoint),
                'last-move-computer': !winPlayer && isLastMove(row, col, lastComputerPoint),
-               'pending-move': isPendingCell(row, col)
+               'pending-move': isPendingCell(row, col),
+               'winning-cell': isWinningCell(row, col)
                }">
             {{isHiddenCell(getCell(row, col), row, col) && !isNormalMode ? '' : getCell(row, col)}}
             <span class="move-order" *ngIf="winPlayer && getMoveOrder(row, col) !== null">{{ getMoveOrder(row, col) }}</span>
