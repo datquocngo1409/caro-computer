@@ -3,6 +3,7 @@ html, body {
   padding: 0;
   height: 100%;
   overflow: hidden;
+  touch-action: manipulation;
 }
 body {
   background-color: rgb(32, 32, 32);
