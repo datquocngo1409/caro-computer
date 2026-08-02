@@ -1,27 +1,35 @@
-<h1>Game caro</h1>
-<div class="switch-container" (click)="changeMode()">
-  <div class="normal-mode-container switch-element" [ngClass]="{'active-mode': isNormalMode}">
-    Normal mode
-  </div>
-  <div class="remember-mode-container switch-element" [ngClass]="{'active-mode': !isNormalMode}">
-    Remember mode
-  </div>
-  <div class="switch-button" [ngClass]="{'right-switch': !isNormalMode}">
-
-  </div>
+<div class="start-screen" *ngIf="!gameStarted">
+  <button class="reset-button" (click)="start()">Start</button>
 </div>
-<button class="reset-button" (click)="init()">New Game</button>
-<table>
-  <tr *ngFor="let dataTd of matrixGame; index as i">
-    <td *ngFor="let cell of dataTd; index as j">
-      <div class="table-element" (click)="handleClick(i + '-' + j)"
-           [ngClass]="{
-           'hiddenCell': isHiddenCell(cell, i, j) && !isNormalMode,
-           'x': (cell === 'X'),
-           'o': (cell === 'O')
-           }">
-        {{isHiddenCell(cell, i, j) && !isNormalMode ? '' : cell}}
-      </div>
-    </td>
-  </tr>
-</table>
+
+<ng-container *ngIf="gameStarted">
+  <div class="board-viewport" #boardViewport [class.dragging]="isDragging"
+       (pointerdown)="onBoardPointerDown($event)"
+       (pointermove)="onBoardPointerMove($event)"
+       (pointerup)="onBoardPointerUp($event)"
+       (pointercancel)="onBoardPointerCancel($event)">
+    <table>
+      <tr *ngFor="let row of visibleRows">
+        <td *ngFor="let col of visibleCols">
+          <div class="table-element" [id]="cellId(row, col)" [attr.data-row]="row" [attr.data-col]="col"
+               [ngClass]="{
+               'hiddenCell': isHiddenCell(getCell(row, col), row, col) && !isNormalMode,
+               'x': (getCell(row, col) === 'X'),
+               'o': (getCell(row, col) === 'O'),
+               'last-move-player': !winPlayer && isLastMove(row, col, lastPlayerPoint),
+               'last-move-computer': !winPlayer && isLastMove(row, col, lastComputerPoint),
+               'pending-move': isPendingCell(row, col)
+               }">
+            {{isHiddenCell(getCell(row, col), row, col) && !isNormalMode ? '' : getCell(row, col)}}
+            <span class="move-order" *ngIf="winPlayer && getMoveOrder(row, col) !== null">{{ getMoveOrder(row, col) }}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="result-bar" *ngIf="resultMessage">
+    <p>{{ resultMessage }}</p>
+    <button class="reset-button" (click)="init()">New Game</button>
+  </div>
+</ng-container>

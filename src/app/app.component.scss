@@ -1,3 +1,9 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
 body {
   background-color: rgb(32, 32, 32);
   background-image: url("https://janschreiber.github.io/img2/black-chalk.jpg");
@@ -5,13 +11,6 @@ body {
   text-align: center;
   font-family: 'Indie Flower', 'Comic Sans', cursive;
   font-size: 0.7em;
-}
-h1 {
-  line-height: 1em;
-  margin-bottom: 0;
-  padding-bottom: 5px;
-  font-size: 2.8em;
-  font-weight: bold;
 }
 h2 {
   font-size: 1.3em;
@@ -30,6 +29,35 @@ h3 {
 table {
   margin: 2% auto;
   border-collapse: collapse;
+}
+.start-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .reset-button {
+    width: 140px;
+    height: 44px;
+    font-size: 1.2em;
+    margin-top: 0;
+  }
+}
+.board-viewport {
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  margin: 0;
+  cursor: grab;
+  user-select: none;
+
+  &.dragging {
+    cursor: grabbing;
+  }
 }
 #table_game {
   position: relative;
@@ -90,61 +118,55 @@ table {
 .hiddenCell {
   background-color: darkgray;
 }
-/* modal background */
-.modal {
-  display: none;
+
+.pending-move {
+  background-color: rgba(255, 215, 0, 0.45);
+  box-shadow: inset 0 0 0 2px gold;
+}
+
+.last-move-player, .last-move-computer {
+  box-shadow: inset 0 0 0 3px orange;
+  animation: last-move-fade 0.4s ease-out;
+}
+
+.last-move-computer {
+  box-shadow: inset 0 0 0 3px royalblue;
+}
+
+@keyframes last-move-fade {
+  0% {
+    box-shadow: inset 0 0 0 3px transparent;
+  }
+}
+.result-bar {
   position: fixed;
-  z-index: 1;
+  z-index: 2;
   left: 0;
-  top: 0;
+  bottom: 0;
   width: 100%;
-  height: 100%;
-  overflow: auto; /* enable scroll if needed */
-  background-color: black; /* fallback color */
-  background-color: rgba(0, 0, 0, 0.6);
-}
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px 28px;
+  background-color: rgba(0, 0, 0, 0.75);
 
-/* modal content */
-.modal-content {
-  background-color: rgb(240, 240, 240);
-  color: rgb(32, 32, 32);
-  font-size: 2em;
-  font-weight: bold;
-  /* 16 % from the top and centered */
-  margin: 16% auto;
-  padding: 20px;
-  border: 2px solid black;
-  border-radius: 10px;
-  width: 380px;
-  max-width: 80%;
-}
-.modal-content p {
-  margin: 0;
-  padding: 0;
-}
+  p {
+    margin: 0;
+    padding: 0;
+    font-size: 1.4em;
+    font-weight: bold;
+    color: rgb(230, 230, 230);
+  }
 
-/* close button for modal dialog */
-.close {
-  color: rgb(170, 170, 170);
-  float: right;
-  position: relative;
-  top: -25px;
-  right: -10px;
-  font-size: 34px;
-  font-weight: bold;
-}
-.close:hover,
-.close:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.win-color {
-  background-color: rgb(240, 240, 240);
+  .reset-button {
+    margin-top: 0;
+  }
 }
 
 .table-element {
+  position: relative;
   width: 50px;
   height: 50px;
   border: 0.5px groove  black;
@@ -152,9 +174,23 @@ table {
   justify-content: center;
   align-items: center;
   @media screen and (max-width: 500px) {
-    width: 25px;
-    height: 25px;
+    width: 36px;
+    height: 36px;
   }
+  @media screen and (max-width: 350px) {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+.move-order {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  font-size: 0.45em;
+  line-height: 1;
+  font-weight: normal;
+  color: inherit;
 }
 
 table {
@@ -187,42 +223,4 @@ table {
   }
 }
 
-.switch-container {
-  background-color: lightgray;
-  cursor: pointer;
-  border-radius: 10px;
-  width: 300px;
-  height: 50px;
-  &:hover {
-    box-shadow: 0 3px 4px 0 rgba(0,0,0,0.24), 0 3px 4px 0 rgba(0,0,0,0.19);
-  }
-  .switch-element {
-    width: 50%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    float: left;
-    z-index: 999;
-    position: relative;
-  }
-  .switch-button {
-    width: 140px;
-    height: 40px;
-    transition: all 0.75s ease;
-    background-color: white;
-    border-radius: 10px;
-    position: relative;
-    top: 5px; left: 5px;
-    z-index: 9;
-  }
-  .active-mode {
-    color: deepskyblue !important;
-    font-weight: bold;
-    transition-delay: 0.25s;
-    transition: color 0.5s ease;
-  }
-  .right-switch {
-    left: 155px !important;
-  }
-}
+

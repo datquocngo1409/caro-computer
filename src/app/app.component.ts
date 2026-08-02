@@ -1,18 +1,12 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
+import {Cell, Difficulty, getBestMove} from './gomoku-ai';
 
-const TWO_PLAYER = 'TWO_PLAYER';
 const X = 'X';
 const O = 'O';
 const COMPUTER = 'COMPUTER';
-const COMPUTER_COMPUTER = 'COMPUTER_COMPUTER';
-const WIN = 'WIN';
-const DRAW = 'DRAW';
-const MAP_SCORE_COMPUTER = new Map([
-  [5, Infinity], [4, 2000], [3, 500], [2, 300], [1, 100]
-])
-const MAP_POINT_HUMAN = new Map([
-  [4, 999999], [3, 1000], [2, 400], [1, 10], [0, 0]
-])
+const INITIAL_RADIUS = 10;
+const PADDING = 3;
+const DRAG_THRESHOLD = 4;
 
 @Component({
   selector: 'app-root',
@@ -21,73 +15,186 @@ const MAP_POINT_HUMAN = new Map([
 })
 export class AppComponent implements OnInit{
   title = 'caro-computer';
-  tableContent = "";
-  matrixGame: any = [];
+  stones = new Map<string, Cell>();
+  moveOrder = new Map<string, number>();
+  moveCount = 0;
   typeGame = COMPUTER;
   player = X;
-  idRows = "";
   lastPlayerPoint = [-1, -1];
   lastComputerPoint = [-1, -1];
   winPlayer = '';
   isPlayerWon = false;
-  isNormalMode = false;
+  readonly isNormalMode = false;
+  readonly difficulty: Difficulty = Difficulty.HARD;
+  isComputerThinking = false;
+  resultMessage = '';
+  gameStarted = false;
+
+  minRow = -INITIAL_RADIUS;
+  maxRow = INITIAL_RADIUS;
+  minCol = -INITIAL_RADIUS;
+  maxCol = INITIAL_RADIUS;
+  visibleRows: number[] = [];
+  visibleCols: number[] = [];
+
+  pendingRow: number | null = null;
+  pendingCol: number | null = null;
+
+  @ViewChild('boardViewport') boardViewportRef!: ElementRef<HTMLDivElement>;
+  isDragging = false;
+  private dragMoved = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private scrollStartLeft = 0;
+  private scrollStartTop = 0;
 
   init() {
     this.lastPlayerPoint = [-1, -1];
     this.lastComputerPoint = [-1, -1];
     this.winPlayer = '';
     this.isPlayerWon = false;
-    this.matrixGame = [];
-    const urlParams = new URLSearchParams(window.location.search);
-    let rows = '20';
-    let columns = '20';
-
-    // Data table
-    let tableXO = document.getElementById("table_game");
-
-    for (let row = 0; row < Number(rows); row++) {
-      let arr = [];
-      let rowHTML = "<tr>";
-      for (let col = 0; col < Number(columns); col++) {
-        arr.push("");
-        this.idRows = row.toString() + "-" + col.toString();
-        rowHTML += `<td class="td_game"><div style="width: 50px; height: 50px; border: 1px solid black" id="` + row.toString() + "-" + col.toString() + `" class="fixed"></div></td>`
-      }
-      rowHTML += "</tr>";
-
-      this.tableContent += rowHTML;
-      this.matrixGame.push(arr);
-    }
-
-    // tableXO.innerHTML = this.tableContent
+    this.isComputerThinking = false;
+    this.resultMessage = '';
+    this.stones.clear();
+    this.moveOrder.clear();
+    this.moveCount = 0;
+    this.pendingRow = null;
+    this.pendingCol = null;
+    this.minRow = -INITIAL_RADIUS;
+    this.maxRow = INITIAL_RADIUS;
+    this.minCol = -INITIAL_RADIUS;
+    this.maxCol = INITIAL_RADIUS;
+    this.rebuildVisibleRange();
+    this.scrollCellIntoView(0, 0);
   }
 
   ngOnInit(): void {
+  }
+
+  start() {
+    this.gameStarted = true;
     this.init();
   }
 
-  checkDraw() {
-    for (let i = 0; i < this.matrixGame.length; i++) {
-      for (let j = 0; j < this.matrixGame[0].length; j++) {
-        if (this.matrixGame[i][j] === "") {
-          return false
-        }
-      }
+  rebuildVisibleRange() {
+    this.visibleRows = range(this.minRow, this.maxRow);
+    this.visibleCols = range(this.minCol, this.maxCol);
+  }
+
+  expandBoundsIfNeeded(row: number, col: number) {
+    let changed = false;
+    if (row - this.minRow < PADDING) {
+      this.minRow = row - PADDING;
+      changed = true;
+    }
+    if (this.maxRow - row < PADDING) {
+      this.maxRow = row + PADDING;
+      changed = true;
+    }
+    if (col - this.minCol < PADDING) {
+      this.minCol = col - PADDING;
+      changed = true;
+    }
+    if (this.maxCol - col < PADDING) {
+      this.maxCol = col + PADDING;
+      changed = true;
+    }
+    if (changed) {
+      this.rebuildVisibleRange();
+    }
+  }
+
+  onBoardPointerDown(event: PointerEvent) {
+    if (event.pointerType !== 'mouse') return;
+
+    const el = this.boardViewportRef.nativeElement;
+    this.isDragging = true;
+    this.dragMoved = false;
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.scrollStartLeft = el.scrollLeft;
+    this.scrollStartTop = el.scrollTop;
+    el.setPointerCapture(event.pointerId);
+  }
+
+  onBoardPointerMove(event: PointerEvent) {
+    if (!this.isDragging) return;
+
+    const dx = event.clientX - this.dragStartX;
+    const dy = event.clientY - this.dragStartY;
+    if (!this.dragMoved && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+      this.dragMoved = true;
+    }
+    if (this.dragMoved) {
+      const el = this.boardViewportRef.nativeElement;
+      el.scrollLeft = this.scrollStartLeft - dx;
+      el.scrollTop = this.scrollStartTop - dy;
+    }
+  }
+
+  onBoardPointerUp(event: PointerEvent) {
+    this.isDragging = false;
+    if (this.dragMoved) {
+      this.dragMoved = false;
+      return;
     }
 
-    return true
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.table-element');
+    const row = target?.getAttribute('data-row');
+    const col = target?.getAttribute('data-col');
+    if (row !== null && row !== undefined && col !== null && col !== undefined) {
+      this.handleClick(Number(row), Number(col));
+    }
+  }
+
+  onBoardPointerCancel(event: PointerEvent) {
+    this.isDragging = false;
+    this.dragMoved = false;
+  }
+
+  scrollCellIntoView(row: number, col: number) {
+    setTimeout(() => {
+      document.getElementById(buildCellId(row, col))?.scrollIntoView({block: 'center', inline: 'center', behavior: 'smooth'});
+    });
+  }
+
+  getCell(row: number, col: number): Cell {
+    return this.stones.get(row + ',' + col) ?? '';
+  }
+
+  isPendingCell(row: number, col: number): boolean {
+    return this.pendingRow === row && this.pendingCol === col;
+  }
+
+  setCell(row: number, col: number, value: Cell) {
+    const key = row + ',' + col;
+    if (value === '') {
+      this.stones.delete(key);
+    } else {
+      this.stones.set(key, value);
+      this.moveCount++;
+      this.moveOrder.set(key, this.moveCount);
+    }
+  }
+
+  getMoveOrder(row: number, col: number): number | null {
+    return this.moveOrder.get(row + ',' + col) ?? null;
+  }
+
+  cellId(row: number, col: number): string {
+    return buildCellId(row, col);
   }
 
   getOpponent(player: string) {
-    return player = X ? O : X;
+    return player === X ? O : X;
   }
 
   getHorizontal(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
-      if (y + i < this.matrixGame[0].length && this.matrixGame[x][y + i] === player) {
+      if (this.getCell(x, y + i) === player) {
         count++;
-      } else if (y + i < this.matrixGame[0].length && this.matrixGame[x][y + i] === this.getOpponent(player)) {
+      } else if (this.getCell(x, y + i) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -96,9 +203,9 @@ export class AppComponent implements OnInit{
     }
 
     for (let i = 1; i < 5; i++) {
-      if (y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x][y - i] === player) {
+      if (this.getCell(x, y - i) === player) {
         count++;
-      } else if (y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x][y - i] === this.getOpponent(player)) {
+      } else if (this.getCell(x, y - i) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -112,9 +219,9 @@ export class AppComponent implements OnInit{
   getVertical(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
-      if (x + i < this.matrixGame.length && this.matrixGame[x + i][y] === player) {
+      if (this.getCell(x + i, y) === player) {
         count++;
-      } else if (x + i < this.matrixGame.length && this.matrixGame[x + i][y] === this.getOpponent(player)) {
+      } else if (this.getCell(x + i, y) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -123,9 +230,9 @@ export class AppComponent implements OnInit{
     }
 
     for (let i = 1; i < 5; i++) {
-      if (x - i >= 0 && x - i < this.matrixGame.length && this.matrixGame[x - i][y] === player) {
+      if (this.getCell(x - i, y) === player) {
         count++;
-      } else if (x - i >= 0 && x - i < this.matrixGame.length && this.matrixGame[x - i][y] === this.getOpponent(player)) {
+      } else if (this.getCell(x - i, y) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -139,9 +246,9 @@ export class AppComponent implements OnInit{
   getRightDiagonal(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
-      if (x - i >= 0 && x - i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x - i][y + i] === player) {
+      if (this.getCell(x - i, y + i) === player) {
         count++;
-      } else if (x - i >= 0 && x - i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x - i][y + i] === this.getOpponent(player)) {
+      } else if (this.getCell(x - i, y + i) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -150,9 +257,9 @@ export class AppComponent implements OnInit{
     }
 
     for (let i = 1; i < 5; i++) {
-      if (x + i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x + i][y - i] === player) {
+      if (this.getCell(x + i, y - i) === player) {
         count++;
-      } else if (x + i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x + i][y - i] === this.getOpponent(player)) {
+      } else if (this.getCell(x + i, y - i) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -166,9 +273,9 @@ export class AppComponent implements OnInit{
   getLeftDiagonal(x: number, y: number, player: string, isCheck?: boolean): number {
     let count = 1;
     for (let i = 1; i < 5; i++) {
-      if (x - i >= 0 && x - i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x - i][y - i] === player) {
+      if (this.getCell(x - i, y - i) === player) {
         count++;
-      } else if (x - i >= 0 && x - i < this.matrixGame.length && y - i >= 0 && y - i < this.matrixGame[0].length && this.matrixGame[x - i][y - i] === this.getOpponent(player)) {
+      } else if (this.getCell(x - i, y - i) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -177,9 +284,9 @@ export class AppComponent implements OnInit{
     }
 
     for (let i = 1; i < 5; i++) {
-      if (x + i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x + i][y + i] === player) {
+      if (this.getCell(x + i, y + i) === player) {
         count++;
-      } else if (x + i < this.matrixGame.length && y + i < this.matrixGame[0].length && this.matrixGame[x + i][y + i] === this.getOpponent(player)) {
+      } else if (this.getCell(x + i, y + i) === this.getOpponent(player)) {
         !isCheck && count--;
         break;
       } else {
@@ -210,128 +317,42 @@ export class AppComponent implements OnInit{
     return false;
   }
 
-  handleClick(id: string) {
-    if (this.winPlayer !== '') return;
-    switch (this.processClick(id)) {
-      case WIN:
-        const winnerText = this.isPlayerWon ?  'You are' : 'Computer is';
-        alert(winnerText + " winner");
-        // reset game
-        // this.init();
-        break;
-      case DRAW:
-        alert("Draw");
-        // reset game
-        // this.init();
-        break;
+  handleClick(row: number, col: number) {
+    if (this.winPlayer !== '' || this.isComputerThinking || this.typeGame !== COMPUTER) return;
+    if (this.getCell(row, col) !== "") return;
+
+    if (this.pendingRow !== row || this.pendingCol !== col) {
+      this.pendingRow = row;
+      this.pendingCol = col;
+      return;
     }
+    this.pendingRow = null;
+    this.pendingCol = null;
+
+    this.setCell(row, col, X);
+    this.lastPlayerPoint = [row, col];
+    this.expandBoundsIfNeeded(row, col);
+    this.scrollCellIntoView(row, col);
+
+    if (this.checkWin([row, col], false)) {
+      this.resultMessage = "You are winner";
+      return;
+    }
+
+    this.isComputerThinking = true;
+    setTimeout(() => this.playComputerTurn(), 50);
   }
 
-  processClick(id: string) {
-    let points = id.split("-");
+  playComputerTurn() {
+    const computerTurn = getBestMove(this.stones, O, X, this.difficulty);
+    this.lastComputerPoint = [computerTurn[0], computerTurn[1]];
+    this.setCell(computerTurn[0], computerTurn[1], O);
+    this.isComputerThinking = false;
+    this.expandBoundsIfNeeded(computerTurn[0], computerTurn[1]);
 
-    switch (this.typeGame) {
-      case TWO_PLAYER:
-        break;
-      case COMPUTER:
-        if (this.matrixGame[Number(points[0])][Number(points[1])] === X || this.matrixGame[Number(points[0])][Number(points[1])] === O) {
-          return
-        }
-        this.matrixGame[Number(points[0])][Number(points[1])] = X;
-        this.lastPlayerPoint = [Number(points[0]), Number(points[1])];
-        const computerTurn = this.getPointsComputer();
-        this.lastComputerPoint = [Number(computerTurn[0]), Number(computerTurn[1])];
-        this.matrixGame[Number(computerTurn[0])][Number(computerTurn[1])] = O;
-
-        if (this.checkWin(points, false)) {
-          return WIN;
-        }else if (this.checkWin(computerTurn, true)) {
-          return WIN;
-        }
-
-        // check draw
-        if (this.checkDraw()) {
-          return DRAW;
-        }
-
-        return;
-      default:
-        return;
+    if (this.checkWin(computerTurn, true)) {
+      this.resultMessage = "Computer is winner";
     }
-    return;
-  }
-
-  getPointsComputer() {
-    let maxScore = -Infinity
-    let pointsComputer = []
-    let listScorePoint: any[] = []
-    for (let i = 0; i < this.matrixGame.length; i++) {
-      for (let j = 0; j < this.matrixGame[0].length; j++) {
-        if (this.matrixGame[i][j] === "") {
-          let horizontalScore =
-            this.getNumber(MAP_SCORE_COMPUTER.get(this.getHorizontal(i, j, O))) +
-            this.getNumber(MAP_POINT_HUMAN.get(this.getHorizontal(i, j, X) - 1))
-          let verticalScore =
-            this.getNumber(MAP_SCORE_COMPUTER.get(this.getVertical(i, j, O))) +
-            this.getNumber(MAP_POINT_HUMAN.get(this.getVertical(i, j, X) - 1))
-          let rightDiagonalScore =
-            this.getNumber(MAP_SCORE_COMPUTER.get(this.getRightDiagonal(i, j, O))) +
-            this.getNumber(MAP_POINT_HUMAN.get(this.getRightDiagonal(i, j, X) - 1))
-          let leftDiagonalScore =
-            this.getNumber(MAP_SCORE_COMPUTER.get(this.getLeftDiagonal(i, j, O))) +
-            this.getNumber(MAP_POINT_HUMAN.get(this.getLeftDiagonal(i, j, X) - 1))
-          let score =
-            this.getNumber(MAP_SCORE_COMPUTER.get(
-              Math.max(
-                this.getHorizontal(i, j, O),
-                this.getVertical(i, j, O),
-                this.getRightDiagonal(i, j, O),
-                this.getLeftDiagonal(i, j, O)
-              )
-            )) +
-            this.getNumber(MAP_POINT_HUMAN.get(
-              Math.max(
-                this.getHorizontal(i, j, X),
-                this.getVertical(i, j, X),
-                this.getRightDiagonal(i, j, X),
-                this.getLeftDiagonal(i, j, X)
-              ) - 1
-            ))
-          listScorePoint.push({
-            "totalScore": horizontalScore + verticalScore + rightDiagonalScore + leftDiagonalScore,
-            "score": score,
-            "point": [i,j],
-          })
-          if (maxScore <= score) {
-            maxScore = score
-          }
-        }
-      }
-    }
-
-    // get list max score
-    let maxScoreInList = Math.max(...listScorePoint.map(x => x.totalScore));
-    let maxListScorePoint = listScorePoint.filter(p => p.totalScore === maxScoreInList)
-    let listScoreUse = maxListScorePoint.length > 0 ? maxListScorePoint : listScorePoint;
-    let maxScoreToUse = maxScore < 1000 && maxScoreInList ?  maxScoreInList : maxScore;
-    for (const element of listScoreUse) {
-      if (element.score === maxScoreToUse || element.totalScore === maxScoreToUse) {
-        pointsComputer.push(element.point)
-      }
-    }
-    if (pointsComputer.length === 0) {
-      for (const element of listScorePoint) {
-        if (element.score === maxScore) {
-          pointsComputer.push(element.point)
-        }
-      }
-    }
-    return pointsComputer[Math.floor(Math.random()*pointsComputer.length)]
-  }
-
-  getNumber(number: any) {
-    if (!number) return -1;
-    return number
   }
 
   isHiddenCell(cell: string, i: number, j: number) {
@@ -341,7 +362,19 @@ export class AppComponent implements OnInit{
       (i === this.lastComputerPoint[0] && j === this.lastComputerPoint[1]))
   }
 
-  changeMode() {
-    this.isNormalMode = !this.isNormalMode
+  isLastMove(i: number, j: number, point: number[]): boolean {
+    return i === point[0] && j === point[1];
   }
+}
+
+function range(from: number, to: number): number[] {
+  const result: number[] = [];
+  for (let i = from; i <= to; i++) {
+    result.push(i);
+  }
+  return result;
+}
+
+function buildCellId(row: number, col: number): string {
+  return 'cell-' + row + '-' + col;
 }
